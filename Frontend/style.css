@@ -1,6 +1,6 @@
 :root {
     --bg-main: #111827;  
-    --bg-card: #1bfbf;    
+    --bg-card: #1f2937;    
     --text-main: #f3f4f6;  
     --text-muted: #9ca3af;   
     --primary: #818cf8;    
@@ -36,7 +36,19 @@ header {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.logo {
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.logo-img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.logo-text {
     color: var(--primary);
     font-size: 1.25rem;
     font-weight: bold;
@@ -53,7 +65,7 @@ header {
 
 main {
     padding: 1rem;
-    max-w-md: 28rem;
+    max-width: 28rem; 
     margin: 0 auto;
 }
 
@@ -71,4 +83,62 @@ h2 {
 
 .space-y {
     margin-top: 1rem;
+}
+
+.hidden {
+    display: none;
+}
+
+.workspace-card {
+    background-color: var(--bg-card);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.workspace-title {
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.workspace-desc {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.btn-link {
+    color: var(--primary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.dashboard-card {
+    background-color: var(--bg-card);
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.status-green {
+    background-color: #10b981; 
+    color: #ffffff;
+}
+
+.status-orange {
+    background-color: #f59e0b; 
+    color: #ffffff;
+}
+
+.status-red {
+    background-color: #ef4444; 
+    color: #ffffff;
 }
