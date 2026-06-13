@@ -7,6 +7,8 @@ const dashboardContent = document.getElementById('dashboard-content');
 const dashboardTitle = document.getElementById('dashboard-title');
 const btnBack = document.getElementById('btn-back');
 const btnFav = document.getElementById('btn-fav');
+const searchInput = document.getElementById('search-input');
+const statusFilter = document.getElementById('status-filter');
 
 let pinnedWorkspaces = JSON.parse(localStorage.getItem('pinnedWorkspaces')) || [];
 let currentWorkspaceId = null;
@@ -28,12 +30,15 @@ btnFav.addEventListener('click', () => {
     updateFavButtonState();
 });
 
+searchInput.addEventListener('input', applyFiltersAndRender);
+statusFilter.addEventListener('change', applyFiltersAndRender);
+
 function getStatusClass(status) {
     const s = status ? status.toLowerCase() : '';
-    if (['terminé', 'résolu', 'intégré'].includes(s)) return 'status-green';
-    if (['en cours', 'en création'].includes(s)) return 'status-orange';
-    if (['à faire', 'critique', 'en attente'].includes(s)) return 'status-red';
-    return '';
+    if (['terminé', 'résolu', 'intégré', 'done'].includes(s)) return 'status-green';
+    if (['en cours', 'en création', 'progress'].includes(s)) return 'status-orange';
+    if (['à faire', 'critique', 'en attente', 'todo', 'critical'].includes(s)) return 'status-red';
+    return 'status-grey';
 }
 
 function updateFavButtonState() {
@@ -50,12 +55,43 @@ function showWorkspacesList() {
     loadWorkspaces();
 }
 
+function filterDashboardItems(items, searchTerm = '', filterValue = 'all') {
+    return items.filter(item => {
+        const titleOrName = item.title || item.name || '';
+        const description = item.description || '';
+        const matchesSearch = titleOrName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              description.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const itemStatus = item.status || item.statut_bug || item.statut_asset || item.status_tache || '';
+        let matchesStatus = false;
+        const s = itemStatus.toLowerCase();
+
+        if (filterValue === 'all') {
+            matchesStatus = true;
+        } else if (filterValue === 'todo') {
+            matchesStatus = ['à faire', 'critique', 'en attente', 'todo', 'critical'].includes(s);
+        } else if (filterValue === 'progress') {
+            matchesStatus = ['en cours', 'en création', 'progress'].includes(s);
+        } else if (filterValue === 'done') {
+            matchesStatus = ['terminé', 'résolu', 'intégré', 'done'].includes(s);
+        }
+
+        return matchesSearch && matchesStatus;
+    });
+}
+
 async function loadWorkspaces() {
     try {
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error('Erreur de récupération');
+        
         const workspaces = await response.json();
         workspacesContainer.innerHTML = '';
+        
+        if (workspaces.length === 0) {
+            workspacesContainer.innerHTML = '<p class="italic-text">Aucun workspace trouvé.</p>';
+            return;
+        }
         
         workspaces.sort((a, b) => {
             const aPinned = pinnedWorkspaces.includes(a.id.toString()) ? 1 : 0;
@@ -81,6 +117,7 @@ async function loadWorkspaces() {
         });
     } catch (error) {
         console.error(error);
+        workspacesContainer.innerHTML = '<p class="italic-text status-red">Impossible de charger les espaces.</p>';
     }
 }
 
@@ -90,29 +127,49 @@ async function loadDashboard(workspaceId, workspaceName) {
     currentWorkspaceId = workspaceId;
     currentWorkspaceName = workspaceName;
     dashboardTitle.textContent = `Studio Dashboard : ${workspaceName}`;
+    dashboardContent.innerHTML = '<p class="italic-text">Chargement...</p>';
     updateFavButtonState();
 
     try {
         const response = await fetch(`${API_URL}/${workspaceId}/dashboard`);
+        if (!response.ok) throw new Error('Erreur lors du chargement des données');
+        
         currentDashboardData = await response.json();
         applyFiltersAndRender();
+
     } catch (error) {
         console.error(error);
+        dashboardContent.innerHTML = '<p class="italic-text status-red">Erreur de chargement.</p>';
     }
 }
 
 function applyFiltersAndRender() {
+    const searchTerm = searchInput.value;
+    const filterValue = statusFilter.value;
+
+    const filteredBacklog = filterDashboardItems(currentDashboardData.backlog || [], searchTerm, filterValue);
+    const filteredBugs = filterDashboardItems(currentDashboardData.bugs || [], searchTerm, filterValue);
+    const filteredAssets = filterDashboardItems(currentDashboardData.assets || [], searchTerm, filterValue);
+
     dashboardContent.innerHTML = '';
+
     const renderSection = (sectionTitle, items) => {
-        let html = `<h3 class="space-y">${sectionTitle}</h3>`;
+        let html = `<h3 class="section-subtitle">${sectionTitle}</h3>`;
+        
+        if (items.length === 0) {
+            html += '<p class="italic-text space-y">Aucun élément disponible avec ces filtres.</p>';
+            return html;
+        }
+
         items.forEach(item => {
             const itemStatus = item.status || item.statut_bug || item.statut_asset || item.status_tache || '';
             const colorClass = getStatusClass(itemStatus);
+            
             html += `
                 <div class="card-padding dashboard-card">
-                    <div>
-                        <p>${item.title || item.name}</p>
-                        <span class="card-meta">${item.responsable_nom || 'Non assigné'}</span>
+                    <div class="card-left">
+                        <p class="item-title">${item.title || item.name}</p>
+                        <span class="card-meta">${item.responsable_nom || item.assignee || 'Non assigné'}</span>
                     </div>
                     <span class="badge ${colorClass}">${itemStatus}</span>
                 </div>
@@ -120,9 +177,10 @@ function applyFiltersAndRender() {
         });
         return html;
     };
-    dashboardContent.innerHTML += renderSection('📋 Backlog de fonctionnalités', currentDashboardData.backlog || []);
-    dashboardContent.innerHTML += renderSection('🐛 Suivi des bugs', currentDashboardData.bugs || []);
-    dashboardContent.innerHTML += renderSection('🎨 Gestion des assets', currentDashboardData.assets || []);
+
+    dashboardContent.innerHTML += renderSection('📋 Backlog de fonctionnalités', filteredBacklog);
+    dashboardContent.innerHTML += renderSection('🐛 Suivi des bugs', filteredBugs);
+    dashboardContent.innerHTML += renderSection('🎨 Gestion des assets', filteredAssets);
 }
 
 document.addEventListener('DOMContentLoaded', loadWorkspaces);
