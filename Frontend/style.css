@@ -142,3 +142,69 @@ h2 {
     background-color: #ef4444; 
     color: #ffffff;
 }
+
+.filter-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.filter-container input, .filter-container select {
+    background-color: var(--bg-card);
+    border: 1px solid var(--accent-bg);
+    color: var(--text-main);
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.filter-container input {
+    flex: 2;
+}
+
+.filter-container select {
+    flex: 1;
+}
+
+.fav-card {
+    border: 1px solid var(--primary);
+}
+
+.section-subtitle {
+    margin-top: 1.5rem;
+    color: var(--primary-light);
+    font-size: 1rem;
+    border-left: 3px solid var(--primary);
+    padding-left: 0.5rem;
+}
+
+.item-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.card-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.status-grey {
+    background-color: #6b7280;
+    color: #ffffff;
+}
+
+.status-green {
+    background-color: #10b981;
+    color: #ffffff;
+}
+
+.status-orange {
+    background-color: #f59e0b;
+    color: #ffffff;
+}
+
+.status-red {
+    background-color: #ef4444;
+    color: #ffffff;
+}

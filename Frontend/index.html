@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IndieForge - Gestion de Workspaces</title>
+    <title>IndieForge - Outil Collaboratif</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
             <img src="logo.png" alt="IndieForge Logo" class="logo-img">
             <h1 class="logo-text">IndieForge</h1>
         </div>
-        <span id="user-badge" class="badge">Dev Mode</span>
+        <span id="user-badge" class="badge">Studio Mode</span>
     </header>
 
     <main>
@@ -25,8 +25,23 @@
         </section>
 
         <section id="dashboard-section" class="hidden">
-            <button id="btn-back" class="btn-link">⬅ Retour aux projets</button>
+            <div class="flex-between">
+                <button id="btn-back" class="btn-link">⬅ Retour</button>
+                <button id="btn-fav" class="btn-link">☆ Épingler</button>
+            </div>
+            
             <h2 id="dashboard-title">Studio Dashboard</h2>
+            
+            <div class="filter-container space-y">
+                <input type="text" id="search-input" placeholder="🔍 Rechercher un élément...">
+                <select id="status-filter">
+                    <option value="all">Tous les statuts</option>
+                    <option value="todo">À faire / Critique</option>
+                    <option value="progress">En cours</option>
+                    <option value="done">Terminé / Intégré</option>
+                </select>
+            </div>
+
             <div id="dashboard-content" class="space-y"></div>
         </section>
     </main>
