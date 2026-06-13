@@ -6,8 +6,27 @@ const workspacesContainer = document.getElementById('workspaces-container');
 const dashboardContent = document.getElementById('dashboard-content');
 const dashboardTitle = document.getElementById('dashboard-title');
 const btnBack = document.getElementById('btn-back');
+const btnFav = document.getElementById('btn-fav');
+
+let pinnedWorkspaces = JSON.parse(localStorage.getItem('pinnedWorkspaces')) || [];
+let currentWorkspaceId = null;
+let currentWorkspaceName = '';
+let currentDashboardData = { backlog: [], bugs: [], assets: [] };
 
 btnBack.addEventListener('click', showWorkspacesList);
+
+btnFav.addEventListener('click', () => {
+    if (!currentWorkspaceId) return;
+    const idStr = currentWorkspaceId.toString();
+    const index = pinnedWorkspaces.indexOf(idStr);
+    if (index === -1) {
+        pinnedWorkspaces.push(idStr);
+    } else {
+        pinnedWorkspaces.splice(index, 1);
+    }
+    localStorage.setItem('pinnedWorkspaces', JSON.stringify(pinnedWorkspaces));
+    updateFavButtonState();
+});
 
 function getStatusClass(status) {
     const s = status ? status.toLowerCase() : '';
@@ -15,6 +34,14 @@ function getStatusClass(status) {
     if (['en cours', 'en création'].includes(s)) return 'status-orange';
     if (['à faire', 'critique', 'en attente'].includes(s)) return 'status-red';
     return '';
+}
+
+function updateFavButtonState() {
+    if (pinnedWorkspaces.includes(currentWorkspaceId.toString())) {
+        btnFav.textContent = '★ Épinglé';
+    } else {
+        btnFav.textContent = '☆ Épingler';
+    }
 }
 
 function showWorkspacesList() {
@@ -27,80 +54,75 @@ async function loadWorkspaces() {
     try {
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error('Erreur de récupération');
-        
         const workspaces = await response.json();
         workspacesContainer.innerHTML = '';
         
-        if (workspaces.length === 0) {
-            workspacesContainer.innerHTML = '<p class="italic-text">Aucun workspace trouvé.</p>';
-            return;
-        }
-        
+        workspaces.sort((a, b) => {
+            const aPinned = pinnedWorkspaces.includes(a.id.toString()) ? 1 : 0;
+            const bPinned = pinnedWorkspaces.includes(b.id.toString()) ? 1 : 0;
+            return bPinned - aPinned;
+        });
+
         workspaces.forEach(ws => {
             const card = document.createElement('div');
-            card.className = 'card-padding space-y workspace-card';
+            const isPinned = pinnedWorkspaces.includes(ws.id.toString());
+            card.className = `card-padding space-y workspace-card ${isPinned ? 'fav-card' : ''}`;
             
             card.innerHTML = `
-                <h3 class="workspace-title">${ws.name}</h3>
+                <div class="flex-between">
+                    <h3 class="workspace-title">${ws.name}</h3>
+                    <span>${isPinned ? '★' : ''}</span>
+                </div>
                 <p class="workspace-desc">${ws.description || 'Pas de description'}</p>
             `;
             
             card.addEventListener('click', () => loadDashboard(ws.id, ws.name));
-            
             workspacesContainer.appendChild(card);
         });
     } catch (error) {
         console.error(error);
-        workspacesContainer.innerHTML = '<p class="italic-text status-red">Impossible de charger les espaces.</p>';
     }
 }
 
 async function loadDashboard(workspaceId, workspaceName) {
     workspacesSection.classList.add('hidden');
     dashboardSection.classList.remove('hidden');
+    currentWorkspaceId = workspaceId;
+    currentWorkspaceName = workspaceName;
     dashboardTitle.textContent = `Studio Dashboard : ${workspaceName}`;
-    dashboardContent.innerHTML = '<p class="italic-text">Chargement...</p>';
+    updateFavButtonState();
 
     try {
         const response = await fetch(`${API_URL}/${workspaceId}/dashboard`);
-        if (!response.ok) throw new Error('Erreur lors du chargement des données');
-        
-        const data = await response.json();
-        dashboardContent.innerHTML = '';
-
-        const renderSection = (sectionTitle, items) => {
-            let html = `<h3 class="space-y">${sectionTitle}</h3>`;
-            
-            if (items.length === 0) {
-                html += '<p class="italic-text">Aucun élément disponible.</p>';
-                return html;
-            }
-
-            items.forEach(item => {
-                const itemStatus = item.status || '';
-                const colorClass = getStatusClass(itemStatus);
-                
-                html += `
-                    <div class="card-padding dashboard-card">
-                        <div>
-                            <p>${item.title || item.name}</p>
-                            <span class="card-meta">${item.responsable_nom || 'Non assigné'}</span>
-                        </div>
-                        <span class="badge ${colorClass}">${itemStatus}</span>
-                    </div>
-                `;
-            });
-            return html;
-        };
-
-        dashboardContent.innerHTML += renderSection('📋 Backlog de fonctionnalités', data.backlog);
-        dashboardContent.innerHTML += renderSection('🐛 Suivi des bugs', data.bugs);
-        dashboardContent.innerHTML += renderSection('🎨 Gestion des assets', data.assets);
-
+        currentDashboardData = await response.json();
+        applyFiltersAndRender();
     } catch (error) {
         console.error(error);
-        dashboardContent.innerHTML = '<p class="italic-text status-red">Erreur de chargement.</p>';
     }
+}
+
+function applyFiltersAndRender() {
+    dashboardContent.innerHTML = '';
+    const renderSection = (sectionTitle, items) => {
+        let html = `<h3 class="space-y">${sectionTitle}</h3>`;
+        items.forEach(item => {
+            const itemStatus = item.status || item.statut_bug || item.statut_asset || item.status_tache || '';
+            const colorClass = getStatusClass(itemStatus);
+            html += `
+                <div class="card-padding dashboard-card">
+                    <div>
+                        <p>${item.title || item.name}</p>
+                        <span class="card-meta">${item.responsable_nom || 'Non assigné'}</span>
+                    </div>
+                    <span class="badge ${colorClass}">${itemStatus}</span>
+                </div>
+            `;
+        });
+        return html;
+    };
+    dashboardContent.innerHTML += renderSection('📋 Backlog de fonctionnalités', currentDashboardData.backlog || []);
+    dashboardContent.innerHTML += renderSection('🐛 Suivi des bugs', currentDashboardData.bugs || []);
+    dashboardContent.innerHTML += renderSection('🎨 Gestion des assets', currentDashboardData.assets || []);
 }
 
 document.addEventListener('DOMContentLoaded', loadWorkspaces);
